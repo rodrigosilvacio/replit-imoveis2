@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: search
+    description: Property search operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /search/parse:
+    post:
+      operationId: parseSearchPreferences
+      tags: [search]
+      summary: Parse natural language search preferences with AI
+      description: Uses OpenAI to interpret free-text preferences and return structured search filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParsePreferencesInput"
+      responses:
+        "200":
+          description: Parsed filters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchFilters"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /search/properties:
+    post:
+      operationId: searchProperties
+      tags: [search]
+      summary: Search properties across real estate portals
+      description: Uses Firecrawl to search for properties matching the given filters on major Brazilian real estate portals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchFilters"
+      responses:
+        "200":
+          description: List of matching properties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +101,136 @@ components:
       required:
         - status
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    ParsePreferencesInput:
+      type: object
+      required:
+        - freeText
+      properties:
+        freeText:
+          type: string
+          description: Free-text preferences from the user
+        operationType:
+          type: ["string", "null"]
+          enum: ["venda", "locacao", null]
+        propertyType:
+          type: ["string", "null"]
+          enum: ["apartamento", "casa", "studio", "terreno", "comercial", null]
+        city:
+          type: ["string", "null"]
+        neighborhood:
+          type: ["string", "null"]
+        minPrice:
+          type: ["number", "null"]
+        maxPrice:
+          type: ["number", "null"]
+        minBedrooms:
+          type: ["integer", "null"]
+        minBathrooms:
+          type: ["integer", "null"]
+        minParkingSpots:
+          type: ["integer", "null"]
+        minArea:
+          type: ["number", "null"]
+
+    SearchFilters:
+      type: object
+      required:
+        - operationType
+        - propertyType
+        - city
+      properties:
+        operationType:
+          type: string
+          enum: ["venda", "locacao"]
+        propertyType:
+          type: string
+          enum: ["apartamento", "casa", "studio", "terreno", "comercial"]
+        city:
+          type: string
+        neighborhood:
+          type: ["string", "null"]
+        minPrice:
+          type: ["number", "null"]
+        maxPrice:
+          type: ["number", "null"]
+        minBedrooms:
+          type: ["integer", "null"]
+        minBathrooms:
+          type: ["integer", "null"]
+        minParkingSpots:
+          type: ["integer", "null"]
+        minArea:
+          type: ["number", "null"]
+        freeText:
+          type: ["string", "null"]
+
+    Property:
+      type: object
+      required:
+        - id
+        - title
+        - price
+        - propertyType
+        - operationType
+        - city
+        - sourcePortal
+        - sourceUrl
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        price:
+          type: ["number", "null"]
+        priceText:
+          type: string
+        propertyType:
+          type: string
+        operationType:
+          type: string
+        city:
+          type: string
+        neighborhood:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        area:
+          type: ["number", "null"]
+        bedrooms:
+          type: ["integer", "null"]
+        bathrooms:
+          type: ["integer", "null"]
+        parkingSpots:
+          type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        sourcePortal:
+          type: string
+        sourceUrl:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    SearchResults:
+      type: object
+      required:
+        - properties
+        - total
+        - filters
+      properties:
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Property"
+        total:
+          type: integer
+        filters:
+          $ref: "#/components/schemas/SearchFilters"

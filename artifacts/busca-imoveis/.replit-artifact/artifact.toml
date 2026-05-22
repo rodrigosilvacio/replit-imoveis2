@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Busca Inteligente de Imóveis"
+version = "1.0.0"
+id = "artifacts/busca-imoveis"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24757
+
+[services.development]
+run = "pnpm --filter @workspace/busca-imoveis run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/busca-imoveis", "run", "build" ]
+publicDir = "artifacts/busca-imoveis/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24757"
+BASE_PATH = "/"

@@ -1,45 +1,59 @@
-# [Project name]
+# Busca Inteligente de Imóveis
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Uma aplicação web que permite buscar imóveis para venda ou locação em grandes portais brasileiros (ZAP Imóveis, Viva Real, OLX, ImovelWeb), com interpretação de preferências em linguagem natural via OpenAI e coleta de dados via Firecrawl.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/busca-imoveis run dev` — frontend React/Vite (porta $PORT)
+- `pnpm --filter @workspace/api-server run dev` — API Express (porta $PORT)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-spec run codegen` — regenerar hooks React Query e schemas Zod a partir da spec OpenAPI
+- Required env: `OPENAI_API_KEY`, `FIRECRAWL_API_KEY`
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React 18 + Vite + TailwindCSS + shadcn/ui + react-hook-form + zod + wouter
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
+- AI: OpenAI gpt-4o-mini (interpretação de texto livre em filtros estruturados)
+- Busca: Firecrawl (search de imóveis nos portais, respeitando termos de uso)
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — spec OpenAPI, fonte da verdade para todos os contratos de API
+- `artifacts/api-server/src/routes/search.ts` — rotas de busca (/search/parse e /search/properties)
+- `artifacts/busca-imoveis/src/components/search-form.tsx` — formulário de busca com todos os filtros
+- `artifacts/busca-imoveis/src/components/property-card.tsx` — card de imóvel com todos os campos
+- `artifacts/busca-imoveis/src/pages/search.tsx` — tela inicial com hero e formulário
+- `artifacts/busca-imoveis/src/pages/results.tsx` — grade de resultados com loading/empty states
+- `artifacts/busca-imoveis/src/lib/store.tsx` — estado global (filtros, resultados, loading)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Firecrawl é usado para fazer search nos portais via Google (site:zapimoveis.com.br ...) — evita scraping direto e respeita termos de uso
+- OpenAI gpt-4o-mini interpreta texto livre e retorna JSON estruturado; filtros do formulário têm prioridade se conflitarem
+- O fluxo de busca é sequencial: parse (se há texto livre) → search properties
+- A spec OpenAPI define ParsePreferencesInput (entrada do parse) separada de SearchFilters (saída do parse = entrada da busca) para evitar colisões de nomes no Orval codegen
+- Estado global com React Context preserva filtros e resultados ao navegar entre telas
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Tela inicial com formulário completo: tipo de operação, tipo de imóvel, cidade, bairro, faixas de valor, quartos, banheiros, vagas, área mínima e texto livre
+- Campo de texto livre interpretado por IA para enriquecer os filtros estruturados
+- Busca simultânea em ZAP Imóveis, Viva Real, OLX e ImovelWeb via Firecrawl
+- Cards de resultado com: imagem, valor, tipo, cidade/bairro, área m², quartos, banheiros, vagas, portal de origem, link direto ao anúncio
+- Estados de loading com mensagem descritiva, empty state e error state
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Aplicação em português (Brasil)
+- Firecrawl no lugar de SerpAPI para busca nos portais
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- A API do Firecrawl tem limite de buscas no plano gratuito (500 créditos/mês) — cada busca consome 4 créditos (um por portal)
+- Após alterações na spec OpenAPI, sempre rodar codegen antes de usar os tipos gerados
+- SelectItem do shadcn/ui não aceita value="" — usar "any" como valor representando "Qualquer"
