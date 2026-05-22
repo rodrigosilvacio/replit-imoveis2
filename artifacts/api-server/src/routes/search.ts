@@ -111,6 +111,12 @@ interface FirecrawlSearchResult {
   };
 }
 
+interface FirecrawlSearchResponse {
+  web?: FirecrawlSearchResult[];
+  news?: FirecrawlSearchResult[];
+  images?: FirecrawlSearchResult[];
+}
+
 function detectPortalName(url: string): string {
   if (url.includes("zapimoveis") || url.includes("zap.viva")) return "ZAP Imóveis";
   if (url.includes("vivareal")) return "Viva Real";
@@ -274,17 +280,17 @@ router.post("/search/properties", async (req, res) => {
       try {
         const searchResult = await firecrawl.search(searchQuery, {
           limit: 5,
-          scrapeOptions: {
-            formats: ["markdown"],
-          },
-        }) as unknown as { success: boolean; data: FirecrawlSearchResult[] };
+        }) as unknown as FirecrawlSearchResponse;
 
-        if (searchResult.success && searchResult.data) {
-          for (const item of searchResult.data) {
-            const itemUrl = (item as FirecrawlSearchResult).url ?? "";
+        const items = searchResult?.web ?? [];
+        console.log(`Query: "${searchQuery}" → count=${items.length}`);
+
+        if (items.length) {
+          for (const item of items) {
+            const itemUrl = item.url ?? "";
             if (!itemUrl) continue;
 
-            const prop = parsePropertyFromResult(item as FirecrawlSearchResult, {
+            const prop = parsePropertyFromResult(item, {
               operationType: filters.operationType,
               propertyType: filters.propertyType,
               city: filters.city,
@@ -298,7 +304,7 @@ router.post("/search/properties", async (req, res) => {
         console.warn(`Search failed for portal query: ${searchQuery}`, portalErr);
       }
 
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 200));
     }
 
     const seen = new Set<string>();
